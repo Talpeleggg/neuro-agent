@@ -4,25 +4,26 @@ from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_experimental.agents import create_pandas_dataframe_agent
 
-def get_neural_agent(df, output_dir):
+def get_credentials():
+    """Helper to handle Enterprise Auth Fallback"""
     load_dotenv()
-    
-    api_key = None
     try:
         credentials, project = google.auth.default()
-        print("System: Using Kubernetes/GCP Workload Identity.")
+        return None # Uses ADC
     except google.auth.exceptions.DefaultCredentialsError:
-        print("System: ADC not found. Falling back to local .env API key.")
         api_key = os.getenv("GOOGLE_API_KEY")
         if not api_key:
             raise EnvironmentError("No K8s Identity and no GOOGLE_API_KEY found in .env")
+        return api_key
 
-    # Pass the api_key explicitly to prevent the 400 error
+def get_neural_agent(df, output_dir):
+    """The Primary Analysis Agent for chatting and plotting."""
+    api_key = get_credentials()
     llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0, api_key=api_key)
     
     instructions = f"""
         You are an elite Computational Neuroscientist and Lead Data Engineer. 
-        You specialize in analyzing Brain-Computer Interface (BCI) signals and EEG data.
+        You specialize in analyzing BCI signals and EEG data.
         
         VISUALIZATION RULES:
         1. Generate production-quality graphs using 'matplotlib' or 'seaborn'.
@@ -37,5 +38,29 @@ def get_neural_agent(df, output_dir):
         llm, df, verbose=True, allow_dangerous_code=True,
         prefix=instructions, handle_parsing_errors=True
     )
-    
     return agent
+
+def generate_data_quality_report(df):
+    """The Data Engineering Agent: Automatically profiles data health upon ingestion."""
+    api_key = get_credentials()
+    llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0, api_key=api_key)
+    
+    # We pass the descriptive statistics to the LLM to avoid sending the whole raw dataset
+    stats_string = df.describe().to_string()
+    missing_data = df.isna().sum().to_string()
+    
+    prompt = f"""
+    You are a strict Data Quality Engineer for a neuroscience lab.
+    Review the following statistical summary and missing values report for a newly ingested dataset.
+    
+    Stats:
+    {stats_string}
+    
+    Missing Values:
+    {missing_data}
+    
+    Write a highly concise, 3-bullet-point Data Quality Report. Call out any extreme outliers, significant missing data, or state if the data looks clean and normalized. Do not write a long essay.
+    """
+    
+    response = llm.invoke(prompt)
+    return response.content
