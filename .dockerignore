@@ -1,0 +1,19 @@
+# Security
+.env
+
+# Virtual Environments & Cache
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Git
+.git/
+.gitignore
+
+# Local Data & Graphs (K8s will handle these dynamically)
+*.csv
+*.edf
+*.parquet
+ui_graphs/
+saved_graphs/
