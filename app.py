@@ -251,13 +251,18 @@ if st.session_state.get('data_loaded'):
                 options=numeric_cols,
                 default=numeric_cols[:min(6, len(numeric_cols))],
             )
-            max_rows = st.slider(
-                'Rows to display',
-                min_value=1_000,
-                max_value=min(100_000, len(df)),
-                value=min(10_000, len(df)),
-                step=1_000,
-            )
+            SLIDER_THRESHOLD = 1_000
+            if len(df) > SLIDER_THRESHOLD:
+                max_rows = st.slider(
+                    'Rows to display',
+                    min_value=SLIDER_THRESHOLD,
+                    max_value=min(100_000, len(df)),
+                    value=min(10_000, len(df)),
+                    step=SLIDER_THRESHOLD,
+                )
+            else:
+                max_rows = len(df)
+                st.caption(f'Showing all {len(df):,} rows.')
             if sel_cols:
                 st.line_chart(df[sel_cols].iloc[:max_rows], use_container_width=True)
             else:
