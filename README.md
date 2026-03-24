@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="icon7.png" alt="NeuroData Pipeline" width="100"/>
+</p>
+
 # NeuroData Pipeline
 
 An enterprise-grade multi-agent platform for BCI and EEG data analysis, built with Streamlit and powered by Google Gemini via LangChain.
