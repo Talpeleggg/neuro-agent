@@ -1,3 +1,4 @@
+import base64
 import glob
 import hashlib
 import io
@@ -9,42 +10,147 @@ import streamlit as st
 from agent import generate_data_quality_report, get_neural_agent
 from data_ingestion import ALL_SUPPORTED, process_neuro_data
 
+# ── Image processing for icons ────────────────────────────────────
+def get_image_base64(image_path):
+    try:
+        with open(image_path, "rb") as image_file:
+            encoded_string = base64.b64encode(image_file.read()).decode()
+        return encoded_string
+    except FileNotFoundError:
+        # מחזיר מחרוזת ריקה אם הקובץ לא נמצא, כדי שנוכל להציג שגיאה מסודרת
+        return ""
+
+# 1. The small icon (for sidebar and browser tab)
+# חובה להשתמש ב-PNG כדי שיהיה רקע שקוף! ודאי שיש קובץ icon.png בתיקייה.
+_ICON_B64 = get_image_base64("icon7.png")
+_SMALL_ICON_HTML = f'<img src="data:image/png;base64,{_ICON_B64}" width="26" height="26" style="display:inline-block; vertical-align:middle; margin-right: 10px;" alt="Brain Icon"/>'
+
+# 2. The large transparent logo (for the main hero banner on the right)
+_LOGO_B64 = get_image_base64("icon7.png")
+if _LOGO_B64:
+    _LARGE_LOGO_HTML = f'<img src="data:image/png;base64,{_LOGO_B64}" width="180" style="display:block; object-fit:contain;" alt="NeuroData Logo"/>'
+else:
+    _LARGE_LOGO_HTML = '<div style="color:#ff4b4b; font-size:12px; border:1px dashed #ff4b4b; padding:10px;">Missing:<br>icon7.png</div>'
+
+
 # ── Page config ────────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title='NeuroData Pipeline',
-    page_icon='🧠',
+    # Small icon for browser tab
+    page_icon=f"data:image/png;base64,{_ICON_B64}" if _ICON_B64 else "🧠",
     layout='wide',
     initial_sidebar_state='expanded',
 )
 
 # ── Global styles ──────────────────────────────────────────────────────────────
-st.markdown("""
+st.markdown(f"""
 <style>
-.hero-banner {
-    background: linear-gradient(135deg, #101015 0%, #202025 100%);
-    padding: 2rem; border-radius: 12px; margin-bottom: 2rem;
-    border: 1px solid #303035;
-}
-.hero-title {
-    color: #FFFFFF; font-size: 2.2rem !important;
-    font-weight: 700 !important; margin-bottom: 0.2rem !important;
-}
-.stChatMessage { border-radius: 10px; margin-bottom: 10px; }
-.stChatMessage.user { background-color: #262730; }
-.stChatMessage.assistant { background-color: #101015; border: 1px solid #202025; }
-div.stMetric {
+/* Hero Banner - Dark blue gradient */
+.hero-banner {{
+    background: linear-gradient(130deg, #0D1F45 0%, #1A3A8A 45%, #0F2460 100%);
+    border: 1px solid #2A52A8;
+    border-radius: 14px;
+    margin-bottom: 2rem;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    box-shadow: 0 6px 28px rgba(20,55,160,0.28), 0 2px 8px rgba(0,0,0,0.30);
+}}
+.hero-body {{
+    flex: 1;
+    padding: 2rem 2.4rem;
+}}
+.hero-title {{
+    color: #FFFFFF !important; 
+    font-size: 2.2rem !important;
+    font-weight: 700 !important; 
+    margin-bottom: 0.25rem !important;
+    letter-spacing: -0.02em;
+    font-family: sans-serif;
+}}
+.hero-sub {{
+    color: #93C5FD !important; 
+    font-size: 0.90rem !important; 
+    margin: 0 !important;
+}}
+.hero-art {{
+    flex-shrink: 0;
+    display: flex; 
+    align-items: center; 
+    justify-content: center;
+    padding: 1rem 2.5rem 1rem 0;
+}}
+
+/* Sidebar styling for the small icon + text - Pushed to the far left */
+.sidebar-header-container {{
+    display: flex;
+    align-items: center;
+    justify-content: flex-start; /* דוחף הכל שמאלה */
+    margin-left: -10px; /* קירוב נוסף לקצה השמאלי */
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(26, 58, 138, 0.2);
+}}
+.sidebar-header-text {{
+    color: #1A3A8A; 
+    font-weight: 800;
+    font-size: 1.2rem;
+    margin: 0;
+}}
+
+/* --- BUTTON STYLES (תכלת Theme) --- */
+/* כפתורים רגילים (Secondary) */
+div.stButton > button {{
+    background-color: rgba(0, 208, 255, 0.05);
+    color: #00D0FF;
+    border: 1px solid #00D0FF;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}}
+div.stButton > button:hover {{
+    background-color: #00D0FF;
+    color: #0D1F45;
+    border-color: #00D0FF;
+    box-shadow: 0 4px 12px rgba(0, 208, 255, 0.3);
+}}
+div.stButton > button:active {{
+    background-color: #0098CC;
+    color: #FFFFFF;
+}}
+
+/* כפתור ראשי (Primary - Execute) */
+div.stButton > button[kind="primary"] {{
+    background: linear-gradient(130deg, #00D0FF 0%, #4A78F5 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+}}
+div.stButton > button[kind="primary"]:hover {{
+    box-shadow: 0 0 15px rgba(0, 208, 255, 0.5);
+    border: none;
+    transform: translateY(-1px);
+}}
+
+/* Chat Styles */
+.stChatMessage {{ border-radius: 10px; margin-bottom: 10px; }}
+.stChatMessage.user {{ background-color: #262730; }}
+.stChatMessage.assistant {{ background-color: #101015; border: 1px solid #202025; }}
+div.stMetric {{
     background-color: #1A1A20; border-radius: 10px;
     padding: 15px; border: 1px solid #202025;
-}
+}}
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown("""
+# Main Page Hero - Using the large transparent logo on the right
+st.markdown(f"""
 <div class="hero-banner">
-    <h1 class="hero-title">🧠 NeuroData Pipeline</h1>
-    <p style='color: #A0A0A5; margin-bottom: 0;'>
-        Enterprise Multi-Agent BCI &amp; EEG Analysis
-    </p>
+  <div class="hero-body">
+    <div class="hero-title">NeuroData Pipeline</div>
+    <div class="hero-sub">Enterprise Multi-Agent BCI &amp; EEG Analysis</div>
+  </div>
+  <div class="hero-art">{_LARGE_LOGO_HTML}</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -69,6 +175,17 @@ SUPPORTED_EXTS = sorted(ALL_SUPPORTED)
 SUPPORTED_LABEL = 'EEG/BCI: EDF, BDF, FIF, SET, VHDR, CNT, GDF  |  Tabular: CSV, TSV, XLSX  |  NumPy: NPY, NPZ'
 
 with st.sidebar:
+    # Sidebar Header - Small icon next to text (now aligned left and transparent)
+    if _ICON_B64:
+        st.markdown(f"""
+        <div class="sidebar-header-container">
+            {_SMALL_ICON_HTML}
+            <h2 class="sidebar-header-text">NeuroData Pipeline</h2>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown('<div class="sidebar-header-container"><h2 class="sidebar-header-text">NeuroData Pipeline</h2></div>', unsafe_allow_html=True)
+    
     st.header('⚙️ Data Engineering Config')
 
     uploaded_file = st.file_uploader(
@@ -92,7 +209,7 @@ with st.sidebar:
     )
 
     apply_reference = st.checkbox('Average EEG Re-reference', value=True,
-                                  help='Common Average Reference (CAR) — EEG only')
+                                help='Common Average Reference (CAR) — EEG only')
 
     compression = st.selectbox('Parquet Compression', ['snappy', 'gzip', 'zstd'], index=0)
 
