@@ -17,26 +17,25 @@ def get_image_base64(image_path):
             encoded_string = base64.b64encode(image_file.read()).decode()
         return encoded_string
     except FileNotFoundError:
-        # מחזיר מחרוזת ריקה אם הקובץ לא נמצא, כדי שנוכל להציג שגיאה מסודרת
         return ""
 
 # 1. The small icon (for sidebar and browser tab)
-# חובה להשתמש ב-PNG כדי שיהיה רקע שקוף! ודאי שיש קובץ icon.png בתיקייה.
-_ICON_B64 = get_image_base64("icon7.png")
+# Must use PNG to support transparent background. Ensure icon.png exists in the project root.
+_ICON_B64 = get_image_base64("icon.png")
 _SMALL_ICON_HTML = f'<img src="data:image/png;base64,{_ICON_B64}" width="26" height="26" style="display:inline-block; vertical-align:middle; margin-right: 10px;" alt="Brain Icon"/>'
 
 # 2. The large transparent logo (for the main hero banner on the right)
-_LOGO_B64 = get_image_base64("icon7.png")
+# Ensure logo_transparent.png exists in the project root.
+_LOGO_B64 = get_image_base64("icon.png")
 if _LOGO_B64:
     _LARGE_LOGO_HTML = f'<img src="data:image/png;base64,{_LOGO_B64}" width="180" style="display:block; object-fit:contain;" alt="NeuroData Logo"/>'
 else:
-    _LARGE_LOGO_HTML = '<div style="color:#ff4b4b; font-size:12px; border:1px dashed #ff4b4b; padding:10px;">Missing:<br>icon7.png</div>'
+    _LARGE_LOGO_HTML = '<div style="color:#ff4b4b; font-size:12px; border:1px dashed #ff4b4b; padding:10px;">Missing:<br>logo_transparent.png</div>'
 
 
 # ── Page config ────────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title='NeuroData Pipeline',
-    # Small icon for browser tab
     page_icon=f"data:image/png;base64,{_ICON_B64}" if _ICON_B64 else "🧠",
     layout='wide',
     initial_sidebar_state='expanded',
@@ -45,7 +44,7 @@ st.set_page_config(
 # ── Global styles ──────────────────────────────────────────────────────────────
 st.markdown(f"""
 <style>
-/* Hero Banner - Dark blue gradient */
+/* Hero Banner - Dark blue gradient (always dark regardless of theme) */
 .hero-banner {{
     background: linear-gradient(130deg, #0D1F45 0%, #1A3A8A 45%, #0F2460 100%);
     border: 1px solid #2A52A8;
@@ -81,29 +80,28 @@ st.markdown(f"""
     padding: 1rem 2.5rem 1rem 0;
 }}
 
-/* Sidebar styling for the small icon + text - Pushed to the far left */
+/* Sidebar styling */
 .sidebar-header-container {{
     display: flex;
     align-items: center;
-    justify-content: flex-start; /* דוחף הכל שמאלה */
-    margin-left: -10px; /* קירוב נוסף לקצה השמאלי */
+    justify-content: flex-start; 
+    margin-left: -10px; 
     margin-bottom: 1.5rem;
     padding-bottom: 1rem;
-    border-bottom: 1px solid rgba(26, 58, 138, 0.2);
+    border-bottom: 1px solid rgba(128, 128, 128, 0.2);
 }}
 .sidebar-header-text {{
-    color: #1A3A8A; 
+    color: var(--text-color); /* adapts to light/dark mode */
     font-weight: 800;
     font-size: 1.2rem;
     margin: 0;
 }}
 
-/* --- BUTTON STYLES (תכלת Theme) --- */
-/* כפתורים רגילים (Secondary) */
+/* --- BUTTON STYLES (Cyan Theme) --- */
 div.stButton > button {{
     background-color: rgba(0, 208, 255, 0.05);
     color: #00D0FF;
-    border: 1px solid #00D0FF;
+    border: 1px solid rgba(0, 208, 255, 0.5);
     border-radius: 8px;
     transition: all 0.3s ease;
 }}
@@ -118,7 +116,6 @@ div.stButton > button:active {{
     color: #FFFFFF;
 }}
 
-/* כפתור ראשי (Primary - Execute) */
 div.stButton > button[kind="primary"] {{
     background: linear-gradient(130deg, #00D0FF 0%, #4A78F5 100%);
     color: white;
@@ -132,18 +129,21 @@ div.stButton > button[kind="primary"]:hover {{
     transform: translateY(-1px);
 }}
 
-/* Chat Styles */
+/* Chat & Metrics Styles - Adaptive to Light/Dark Mode */
 .stChatMessage {{ border-radius: 10px; margin-bottom: 10px; }}
-.stChatMessage.user {{ background-color: #262730; }}
-.stChatMessage.assistant {{ background-color: #101015; border: 1px solid #202025; }}
+.stChatMessage.user {{ background-color: var(--secondary-background-color); }}
+.stChatMessage.assistant {{ background-color: rgba(0, 208, 255, 0.05); border: 1px solid rgba(0, 208, 255, 0.2); }}
+
 div.stMetric {{
-    background-color: #1A1A20; border-radius: 10px;
-    padding: 15px; border: 1px solid #202025;
+    background-color: var(--secondary-background-color); 
+    border-radius: 10px;
+    padding: 15px; 
+    border: 1px solid rgba(128, 128, 128, 0.2);
 }}
 </style>
 """, unsafe_allow_html=True)
 
-# Main Page Hero - Using the large transparent logo on the right
+# Main Page Hero
 st.markdown(f"""
 <div class="hero-banner">
   <div class="hero-body">
@@ -175,7 +175,6 @@ SUPPORTED_EXTS = sorted(ALL_SUPPORTED)
 SUPPORTED_LABEL = 'EEG/BCI: EDF, BDF, FIF, SET, VHDR, CNT, GDF  |  Tabular: CSV, TSV, XLSX  |  NumPy: NPY, NPZ'
 
 with st.sidebar:
-    # Sidebar Header - Small icon next to text (now aligned left and transparent)
     if _ICON_B64:
         st.markdown(f"""
         <div class="sidebar-header-container">
