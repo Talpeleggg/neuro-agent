@@ -51,8 +51,11 @@ def train_xgboost_and_log(df, feature_cols, target_col):
                 # Use mlogloss for multi-class, logloss for binary
                 eval_metric = 'mlogloss' if n_classes > 2 else 'logloss'
 
+                # Use stratified split only if every class has at least 2 samples
+                min_class_count = pd.Series(y_encoded).value_counts().min()
+                stratify_arg = y_encoded if min_class_count >= 2 else None
                 X_train, X_test, y_train, y_test = train_test_split(
-                    X, y_encoded, test_size=0.2, random_state=42, stratify=y_encoded
+                    X, y_encoded, test_size=0.2, random_state=42, stratify=stratify_arg
                 )
 
                 model = xgb.XGBClassifier(
