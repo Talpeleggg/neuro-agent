@@ -398,8 +398,26 @@ if st.session_state.get('data_loaded'):
 
     st.divider()
 
+    # ── Training runs OUTSIDE tabs to avoid Streamlit tab/spinner duplication ──
+    if st.session_state.get('model_training'):
+        with st.spinner("⏳ Training model and logging to MLflow..."):
+            _feats  = st.session_state.get('model_feature_cols', [])
+            _target = st.session_state.get('model_target_col', '')
+            metric_text, fig, error_msg = train_xgboost_and_log(df, _feats, _target)
+            st.session_state['model_training'] = False
+            if error_msg:
+                st.session_state['model_error'] = error_msg
+            else:
+                import matplotlib.pyplot as plt
+                buf = io.BytesIO()
+                fig.savefig(buf, format='png', dpi=120, bbox_inches='tight')
+                plt.close(fig)
+                st.session_state['model_result'] = metric_text
+                st.session_state['model_fig']    = buf.getvalue()
+                st.session_state.pop('model_error', None)
+        st.rerun()
+
     # ── Tabs ───────────────────────────────────────────────────────────────────
-    # Added XGBoost model training tab
     tab_model, tab_chat, tab_dq, tab_preview, tab_data = st.tabs([
         '🤖 Model Training (XGBoost)',
         '💬 Analysis Agent Chat',
@@ -408,7 +426,7 @@ if st.session_state.get('data_loaded'):
         '📋 Data Preview',
     ])
 
-    # ── Tab: Model Training (XGBoost & MLflow) - MLOps Separation ──────────────
+    # ── Tab: Model Training ─────────────────────────────────────────────────────
     with tab_model:
         st.markdown('#### Train Machine Learning Classifier')
         st.info("Train an XGBoost model on your processed data and automatically log the run to MLflow.")
@@ -421,25 +439,14 @@ if st.session_state.get('data_loaded'):
             if not feature_cols or not target_col:
                 st.warning("Please select at least one feature and a target column.")
             else:
-                st.session_state['model_training'] = True
+                # Store selection and flag — training runs above the tabs on next rerun
+                st.session_state['model_feature_cols'] = feature_cols
+                st.session_state['model_target_col']   = target_col
+                st.session_state['model_training']     = True
                 st.session_state.pop('model_result', None)
                 st.session_state.pop('model_fig',    None)
                 st.session_state.pop('model_error',  None)
-
-        # Run training on the next rerun (avoids spinner/tab duplication bug)
-        if st.session_state.get('model_training'):
-            st.info("⏳ Training model and logging to MLflow...")
-            metric_text, fig, error_msg = train_xgboost_and_log(df, feature_cols, target_col)
-            st.session_state['model_training'] = False
-            if error_msg:
-                st.session_state['model_error'] = error_msg
-            else:
-                buf = io.BytesIO()
-                fig.savefig(buf, format='png', dpi=120, bbox_inches='tight')
-                import matplotlib.pyplot as plt; plt.close(fig)
-                st.session_state['model_result'] = metric_text
-                st.session_state['model_fig']    = buf.getvalue()
-            st.rerun()
+                st.rerun()
 
         # Display persisted results
         if st.session_state.get('model_error'):
