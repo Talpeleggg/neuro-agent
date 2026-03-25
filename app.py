@@ -309,9 +309,12 @@ if execute_pipeline and uploaded_file:
             st.session_state['source_filename'] = uploaded_file.name
             st.session_state['data_loaded']     = True
             st.session_state['compression']     = compression
-            # Invalidate cached agent so it picks up new data + metadata
-            st.session_state.pop('agent', None)
-            st.session_state.pop('agent_hash', None)
+            # Invalidate cached agent and model results when a new file is loaded
+            st.session_state.pop('agent',        None)
+            st.session_state.pop('agent_hash',   None)
+            st.session_state.pop('model_result', None)
+            st.session_state.pop('model_fig',    None)
+            st.session_state.pop('model_error',  None)
             st.success('Pipeline complete! Parameters logged to MLflow.')
         except Exception as e:
             st.error(f'Pipeline Error: {e}')
@@ -406,24 +409,36 @@ if st.session_state.get('data_loaded'):
     with tab_model:
         st.markdown('#### Train Machine Learning Classifier')
         st.info("Train an XGBoost model on your processed data and automatically log the run to MLflow.")
-        
+
         all_cols = df.columns.tolist()
         target_col = st.selectbox("🎯 Select Target (Label) Column:", all_cols, index=len(all_cols)-1 if all_cols else 0)
         feature_cols = st.multiselect("🧠 Select Feature Columns (Channels):", all_cols, default=[c for c in all_cols if c != target_col][:15])
-        
+
         if st.button("🚀 Train XGBoost & Log to MLflow", use_container_width=True):
             if not feature_cols or not target_col:
                 st.warning("Please select at least one feature and a target column.")
             else:
                 with st.spinner("Training model and saving to MLflow..."):
-                    # Delegate training to ml_engine.py
                     metric_text, fig, error_msg = train_xgboost_and_log(df, feature_cols, target_col)
-                    
                     if error_msg:
-                        st.error(f"Failed to train model: {error_msg}")
+                        st.session_state['model_error']  = error_msg
+                        st.session_state.pop('model_result', None)
+                        st.session_state.pop('model_fig',    None)
                     else:
-                        st.success(f"🎉 Model trained successfully! **{metric_text}**")
-                        st.pyplot(fig)
+                        # Save figure as PNG bytes so it survives reruns
+                        buf = io.BytesIO()
+                        fig.savefig(buf, format='png', dpi=120, bbox_inches='tight')
+                        import matplotlib.pyplot as plt; plt.close(fig)
+                        st.session_state['model_result'] = metric_text
+                        st.session_state['model_fig']    = buf.getvalue()
+                        st.session_state.pop('model_error', None)
+
+        # Display persisted results — shown on every rerun without re-training
+        if st.session_state.get('model_error'):
+            st.error(f"Failed to train model: {st.session_state['model_error']}")
+        elif st.session_state.get('model_result'):
+            st.success(f"🎉 Model trained successfully! **{st.session_state['model_result']}**")
+            st.image(st.session_state['model_fig'], use_container_width=True)
 
     # ── Tab: Data Preview ──────────────────────────────────────────────────────
     with tab_data:
