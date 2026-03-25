@@ -100,39 +100,55 @@ st.markdown(f"""
     margin: 0;
 }}
 
-/* --- BUTTON STYLES (Uniform Blue Theme) --- */
-/* Uniform semi-transparent background, blue border, full fill on hover */
+/* --- BUTTON STYLES (Bold & Popping) --- */
+/* White background with thick border and shadow to stand out against the blue hero */
 div.stButton > button {{
-    background-color: rgba(74, 120, 245, 0.1) !important;
-    color: #4A78F5 !important;
-    border: 1px solid #4A78F5 !important;
-    border-radius: 8px;
-    transition: all 0.3s ease;
-    font-weight: 600;
+    background-color: #FFFFFF !important;
+    color: #1A3A8A !important;
+    border: 2px solid #4A78F5 !important;
+    border-radius: 8px !important;
+    font-weight: 800 !important;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05) !important;
+    transition: all 0.3s ease !important;
 }}
 div.stButton > button:hover {{
     background-color: #4A78F5 !important;
-    color: #93C5FD !important;
+    color: #FFFFFF !important;
     border-color: #4A78F5 !important;
-    box-shadow: 0 4px 12px rgba(74, 120, 245, 0.3);
+    box-shadow: 0 6px 15px rgba(74, 120, 245, 0.3) !important;
+    transform: translateY(-2px) !important;
 }}
 div.stButton > button:active {{
     background-color: #1A3A8A !important;
-    color: #93C5FD !important;
+    color: #FFFFFF !important;
     border-color: #1A3A8A !important;
 }}
 
-/* Chat & Metrics Styles - Adaptive to Light/Dark Mode */
-.stChatMessage {{ border-radius: 10px; margin-bottom: 10px; }}
-.stChatMessage.user {{ background-color: var(--secondary-background-color); }}
-.stChatMessage.assistant {{ background-color: rgba(0, 208, 255, 0.05); border: 1px solid rgba(0, 208, 255, 0.2); }}
-
+/* --- METRICS CARDS (Bold & 3D Effect) --- */
+/* Solid white cards with rounded corners and shadow for depth */
 div.stMetric {{
-    background-color: var(--secondary-background-color); 
-    border-radius: 10px;
-    padding: 15px; 
-    border: 1px solid rgba(128, 128, 128, 0.2);
+    background-color: #FFFFFF !important;
+    border-radius: 14px !important;
+    padding: 20px 24px !important;
+    border: 1px solid rgba(26, 58, 138, 0.1) !important;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06) !important;
 }}
+/* Metric label — bold, blue */
+div.stMetric label {{
+    font-weight: 700 !important;
+    color: #4A78F5 !important;
+    font-size: 1.05rem !important;
+}}
+/* Metric value — dark navy, large and bold */
+div.stMetric [data-testid="stMetricValue"] {{
+    font-weight: 900 !important;
+    color: #0D1F45 !important;
+}}
+
+/* Chat Styles */
+.stChatMessage {{ border-radius: 10px; margin-bottom: 10px; }}
+.stChatMessage.user {{ background-color: #FFFFFF; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }}
+.stChatMessage.assistant {{ background-color: rgba(74, 120, 245, 0.05); border: 1px solid rgba(74, 120, 245, 0.2); }}
 </style>
 """, unsafe_allow_html=True)
 
