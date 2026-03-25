@@ -297,7 +297,10 @@ if execute_pipeline and uploaded_file:
                     notch_freq=notch_freq,
                     apply_reference=apply_reference,
                 )
-                dq_report = generate_data_quality_report(df, metadata)
+                try:
+                    dq_report = generate_data_quality_report(df, metadata)
+                except Exception as api_err:
+                    dq_report = f"⚠️ **AI Report skipped (API Limit Reached).**\n\nError details: {api_err}\n\n*Don't worry, the rest of the pipeline and data processing completed successfully!*"
                 
                 # Log dataset dimensions to MLflow
                 mlflow.log_metrics({"num_rows": df.shape[0], "num_columns": df.shape[1]})
@@ -418,22 +421,27 @@ if st.session_state.get('data_loaded'):
             if not feature_cols or not target_col:
                 st.warning("Please select at least one feature and a target column.")
             else:
-                with st.spinner("Training model and saving to MLflow..."):
-                    metric_text, fig, error_msg = train_xgboost_and_log(df, feature_cols, target_col)
-                    if error_msg:
-                        st.session_state['model_error']  = error_msg
-                        st.session_state.pop('model_result', None)
-                        st.session_state.pop('model_fig',    None)
-                    else:
-                        # Save figure as PNG bytes so it survives reruns
-                        buf = io.BytesIO()
-                        fig.savefig(buf, format='png', dpi=120, bbox_inches='tight')
-                        import matplotlib.pyplot as plt; plt.close(fig)
-                        st.session_state['model_result'] = metric_text
-                        st.session_state['model_fig']    = buf.getvalue()
-                        st.session_state.pop('model_error', None)
+                st.session_state['model_training'] = True
+                st.session_state.pop('model_result', None)
+                st.session_state.pop('model_fig',    None)
+                st.session_state.pop('model_error',  None)
 
-        # Display persisted results — shown on every rerun without re-training
+        # Run training on the next rerun (avoids spinner/tab duplication bug)
+        if st.session_state.get('model_training'):
+            st.info("⏳ Training model and logging to MLflow...")
+            metric_text, fig, error_msg = train_xgboost_and_log(df, feature_cols, target_col)
+            st.session_state['model_training'] = False
+            if error_msg:
+                st.session_state['model_error'] = error_msg
+            else:
+                buf = io.BytesIO()
+                fig.savefig(buf, format='png', dpi=120, bbox_inches='tight')
+                import matplotlib.pyplot as plt; plt.close(fig)
+                st.session_state['model_result'] = metric_text
+                st.session_state['model_fig']    = buf.getvalue()
+            st.rerun()
+
+        # Display persisted results
         if st.session_state.get('model_error'):
             st.error(f"Failed to train model: {st.session_state['model_error']}")
         elif st.session_state.get('model_result'):
