@@ -112,7 +112,7 @@ def train_xgboost_and_log(df, feature_cols, target_col):
                 "max_depth": 6,
                 "learning_rate": 0.1,
             })
-            mlflow.xgboost.log_model(model, "xgb_model")
+            mlflow.xgboost.log_model(model, name="xgb_model")
 
             # Feature importance plot — use feature_importances_ (sklearn API)
             # instead of xgb.plot_importance() which crashes on small datasets
