@@ -35,6 +35,13 @@ def train_xgboost_and_log(df, feature_cols, target_col):
         X = train_df[feature_cols].fillna(0)  # impute remaining NaNs in features
         y = train_df[target_col]
 
+        # Require at least 20 rows to produce a meaningful train/test split
+        if len(train_df) < 20:
+            return None, None, (
+                f"Dataset too small to train ({len(train_df)} rows after dropping NaNs). "
+                "Please use a dataset with at least 20 rows."
+            )
+
         # Auto-detect task type: numeric target with many unique values → regression
         is_numeric = pd.api.types.is_numeric_dtype(y)
         unique_vals = y.nunique()
@@ -51,7 +58,7 @@ def train_xgboost_and_log(df, feature_cols, target_col):
                 # Use mlogloss for multi-class, logloss for binary
                 eval_metric = 'mlogloss' if n_classes > 2 else 'logloss'
 
-                # Use stratified split only if every class has at least 2 samples
+                # Use stratified split only when every class has at least 2 samples
                 min_class_count = pd.Series(y_encoded).value_counts().min()
                 stratify_arg = y_encoded if min_class_count >= 2 else None
                 X_train, X_test, y_train, y_test = train_test_split(
