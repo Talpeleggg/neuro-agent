@@ -6,6 +6,10 @@ import os
 
 import pandas as pd
 import streamlit as st
+import mlflow
+
+# Import ML training logic from the external engine module
+from ml_engine import train_xgboost_and_log, setup_mlflow
 
 from agent import generate_data_quality_report, get_neural_agent
 from data_ingestion import ALL_SUPPORTED, process_neuro_data
@@ -25,7 +29,6 @@ _ICON_B64 = get_image_base64("icon.png")
 _SMALL_ICON_HTML = f'<img src="data:image/png;base64,{_ICON_B64}" width="26" height="26" style="display:inline-block; vertical-align:middle; margin-right: 10px;" alt="Brain Icon"/>'
 
 # 2. The large transparent logo (for the main hero banner on the right)
-# Ensure logo_transparent.png exists in the project root.
 _LOGO_B64 = get_image_base64("icon.png")
 if _LOGO_B64:
     _LARGE_LOGO_HTML = f'<img src="data:image/png;base64,{_LOGO_B64}" width="180" style="display:block; object-fit:contain;" alt="NeuroData Logo"/>'
@@ -97,36 +100,26 @@ st.markdown(f"""
     margin: 0;
 }}
 
-/* --- BUTTON STYLES (Cyan Theme) --- */
+/* --- BUTTON STYLES (Uniform Blue Theme) --- */
+/* Uniform semi-transparent background, blue border, full fill on hover */
 div.stButton > button {{
-    background-color: rgba(0, 208, 255, 0.05);
-    color: #00D0FF;
-    border: 1px solid rgba(0, 208, 255, 0.5);
+    background-color: rgba(74, 120, 245, 0.1) !important;
+    color: #4A78F5 !important;
+    border: 1px solid #4A78F5 !important;
     border-radius: 8px;
     transition: all 0.3s ease;
+    font-weight: 600;
 }}
 div.stButton > button:hover {{
-    background-color: #00D0FF;
-    color: #0D1F45;
-    border-color: #00D0FF;
-    box-shadow: 0 4px 12px rgba(0, 208, 255, 0.3);
+    background-color: #4A78F5 !important;
+    color: #93C5FD !important;
+    border-color: #4A78F5 !important;
+    box-shadow: 0 4px 12px rgba(74, 120, 245, 0.3);
 }}
 div.stButton > button:active {{
-    background-color: #0098CC;
-    color: #FFFFFF;
-}}
-
-div.stButton > button[kind="primary"] {{
-    background: linear-gradient(130deg, #00D0FF 0%, #4A78F5 100%);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-weight: bold;
-}}
-div.stButton > button[kind="primary"]:hover {{
-    box-shadow: 0 0 15px rgba(0, 208, 255, 0.5);
-    border: none;
-    transform: translateY(-1px);
+    background-color: #1A3A8A !important;
+    color: #93C5FD !important;
+    border-color: #1A3A8A !important;
 }}
 
 /* Chat & Metrics Styles - Adaptive to Light/Dark Mode */
@@ -148,7 +141,7 @@ st.markdown(f"""
 <div class="hero-banner">
   <div class="hero-body">
     <div class="hero-title">NeuroData Pipeline</div>
-    <div class="hero-sub">Enterprise Multi-Agent BCI &amp; EEG Analysis</div>
+    <div class="hero-sub">Enterprise Multi-Agent BCI &amp; EEG Analysis with MLOps</div>
   </div>
   <div class="hero-art">{_LARGE_LOGO_HTML}</div>
 </div>
@@ -185,10 +178,10 @@ with st.sidebar:
     else:
         st.markdown('<div class="sidebar-header-container"><h2 class="sidebar-header-text">NeuroData Pipeline</h2></div>', unsafe_allow_html=True)
     
-    st.header('⚙️ Data Engineering Config')
+    st.header('⚙️ 1. Data Engineering Config')
 
     uploaded_file = st.file_uploader(
-        '1. Ingest Data File',
+        'Ingest Data File',
         type=SUPPORTED_EXTS,
         help=SUPPORTED_LABEL,
     )
@@ -212,12 +205,15 @@ with st.sidebar:
 
     compression = st.selectbox('Parquet Compression', ['snappy', 'gzip', 'zstd'], index=0)
 
-    execute_pipeline = st.button(
-        '🚀 Execute Preprocessing', type='primary', use_container_width=True
-    )
-
-    OUTPUT_DIR = os.path.abspath('./ui_graphs')
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    execute_pipeline = False
+    try:
+        # Removed type='primary' to keep uniform blue button styling
+        execute_pipeline = st.button('🚀 Execute Preprocessing', use_container_width=True)
+        
+        OUTPUT_DIR = os.path.abspath('./ui_graphs')
+        os.makedirs(OUTPUT_DIR, exist_ok=True)
+    except Exception as e:
+        st.error(f"UI Error: {e}")
 
     st.markdown('---')
     st.markdown('### 📊 Quick Visualizations')
@@ -234,23 +230,37 @@ with st.sidebar:
         st.rerun()
 
 
-# ── Pipeline execution ─────────────────────────────────────────────────────────
+# ── Pipeline execution (With MLflow Tracking) ──────────────────────────────────
 if execute_pipeline and not uploaded_file:
     st.warning('Please upload a file before executing the pipeline.')
 
 if execute_pipeline and uploaded_file:
     with st.spinner('ETL Engine: Processing file & running Data Quality Agent…'):
         try:
-            df, parquet_path, metadata = process_neuro_data(
-                uploaded_file,
-                apply_denoise=apply_denoise,
-                l_freq=l_freq,
-                h_freq=h_freq,
-                compression=compression,
-                notch_freq=notch_freq,
-                apply_reference=apply_reference,
-            )
-            dq_report = generate_data_quality_report(df, metadata)
+            # Start MLflow tracking for the ETL ingestion run
+            setup_mlflow()
+            with mlflow.start_run(run_name="Data_Ingestion_ETL"):
+                mlflow.log_params({
+                    "low_freq": l_freq,
+                    "high_freq": h_freq,
+                    "notch": str(notch_freq),
+                    "apply_reference": apply_reference,
+                    "compression": compression
+                })
+
+                df, parquet_path, metadata = process_neuro_data(
+                    uploaded_file,
+                    apply_denoise=apply_denoise,
+                    l_freq=l_freq,
+                    h_freq=h_freq,
+                    compression=compression,
+                    notch_freq=notch_freq,
+                    apply_reference=apply_reference,
+                )
+                dq_report = generate_data_quality_report(df, metadata)
+                
+                # Log dataset dimensions to MLflow
+                mlflow.log_metrics({"num_rows": df.shape[0], "num_columns": df.shape[1]})
 
             st.session_state['df']              = df
             st.session_state['parquet_path']    = parquet_path
@@ -262,7 +272,7 @@ if execute_pipeline and uploaded_file:
             # Invalidate cached agent so it picks up new data + metadata
             st.session_state.pop('agent', None)
             st.session_state.pop('agent_hash', None)
-            st.success('Pipeline complete!')
+            st.success('Pipeline complete! Parameters logged to MLflow.')
         except Exception as e:
             st.error(f'Pipeline Error: {e}')
 
@@ -316,7 +326,6 @@ if st.session_state.get('data_loaded'):
             data=f,
             file_name=f'cleaned_{source_filename}.parquet',
             mime='application/octet-stream',
-            type='primary',
             use_container_width=True,
         )
 
@@ -344,12 +353,37 @@ if st.session_state.get('data_loaded'):
     st.divider()
 
     # ── Tabs ───────────────────────────────────────────────────────────────────
-    tab_chat, tab_dq, tab_preview, tab_data = st.tabs([
+    # Added XGBoost model training tab
+    tab_chat, tab_model, tab_dq, tab_preview, tab_data = st.tabs([
         '💬 Analysis Agent Chat',
+        '🤖 Model Training (XGBoost)',
         '🤖 Data Quality Report',
         '👁️ Signal Preview',
         '📋 Data Preview',
     ])
+
+    # ── Tab: Model Training (XGBoost & MLflow) - MLOps Separation ──────────────
+    with tab_model:
+        st.markdown('#### Train Machine Learning Classifier')
+        st.info("Train an XGBoost model on your processed data and automatically log the run to MLflow.")
+        
+        all_cols = df.columns.tolist()
+        target_col = st.selectbox("🎯 Select Target (Label) Column:", all_cols, index=len(all_cols)-1 if all_cols else 0)
+        feature_cols = st.multiselect("🧠 Select Feature Columns (Channels):", all_cols, default=[c for c in all_cols if c != target_col][:15])
+        
+        if st.button("🚀 Train XGBoost & Log to MLflow", use_container_width=True):
+            if not feature_cols or not target_col:
+                st.warning("Please select at least one feature and a target column.")
+            else:
+                with st.spinner("Training model and saving to MLflow..."):
+                    # Delegate training to ml_engine.py
+                    metric_text, fig, error_msg = train_xgboost_and_log(df, feature_cols, target_col)
+                    
+                    if error_msg:
+                        st.error(f"Failed to train model: {error_msg}")
+                    else:
+                        st.success(f"🎉 Model trained successfully! **{metric_text}**")
+                        st.pyplot(fig)
 
     # ── Tab: Data Preview ──────────────────────────────────────────────────────
     with tab_data:
