@@ -397,10 +397,10 @@ if st.session_state.get('data_loaded'):
 
     # ── Tabs ───────────────────────────────────────────────────────────────────
     # Added XGBoost model training tab
-    tab_chat, tab_model, tab_dq, tab_preview, tab_data = st.tabs([
-        '💬 Analysis Agent Chat',
+    tab_model, tab_chat, tab_dq, tab_preview, tab_data = st.tabs([
         '🤖 Model Training (XGBoost)',
-        '🤖 Data Quality Report',
+        '💬 Analysis Agent Chat',
+        '📊 Data Quality Report',
         '👁️ Signal Preview',
         '📋 Data Preview',
     ])
