@@ -35,6 +35,10 @@ def train_xgboost_and_log(df, feature_cols, target_col):
         X = train_df[feature_cols].fillna(0)  # impute remaining NaNs in features
         y = train_df[target_col]
 
+        # Encode any string/categorical feature columns — XGBoost requires numeric input
+        for col in X.select_dtypes(include='object').columns:
+            X[col] = LabelEncoder().fit_transform(X[col].astype(str))
+
         # Require at least 20 rows to produce a meaningful train/test split
         if len(train_df) < 20:
             return None, None, (
