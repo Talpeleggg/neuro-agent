@@ -393,6 +393,31 @@ if st.session_state.get('data_loaded'):
 
     st.divider()
 
+    # ── Agent init OUTSIDE tabs to avoid Streamlit tab/spinner duplication ───────
+    current_hash = df_fingerprint(df)
+    if (
+        'agent' not in st.session_state
+        or st.session_state.get('agent_hash') != current_hash
+    ):
+        with st.spinner('Initialising Analysis Agent…'):
+            st.session_state['agent']      = get_neural_agent(df, OUTPUT_DIR, metadata)
+            st.session_state['agent_hash'] = current_hash
+
+    # ── Agent query execution OUTSIDE tabs ───────────────────────────────────────
+    if st.session_state.get('agent_query'):
+        query = st.session_state.pop('agent_query')
+        for old_png in glob.glob(f'{OUTPUT_DIR}/*.png'):
+            os.remove(old_png)
+        with st.spinner('Analysis Agent rendering…'):
+            try:
+                answer     = st.session_state['agent'].invoke(query)
+                clean_text = answer['output'].replace('Final Answer:', '').strip()
+                imgs = sorted(glob.glob(f'{OUTPUT_DIR}/*.png'))
+                st.session_state['messages'].append({'role': 'assistant', 'content': clean_text, 'imgs': imgs})
+            except Exception as e:
+                st.session_state['messages'].append({'role': 'assistant', 'content': f'Analysis Error: {e}', 'imgs': []})
+        st.rerun()
+
     # ── Training runs OUTSIDE tabs to avoid Streamlit tab/spinner duplication ──
     if st.session_state.get('model_training'):
         with st.spinner("⏳ Training model and logging to MLflow..."):
@@ -490,24 +515,23 @@ if st.session_state.get('data_loaded'):
 
     # ── Tab: Analysis Agent Chat ───────────────────────────────────────────────
     with tab_chat:
-        # Cache the agent — recreate only when the DataFrame changes
-        current_hash = df_fingerprint(df)
-        if (
-            'agent' not in st.session_state
-            or st.session_state.get('agent_hash') != current_hash
-        ):
-            with st.spinner('Initialising Analysis Agent…'):
-                st.session_state['agent']      = get_neural_agent(df, OUTPUT_DIR, metadata)
-                st.session_state['agent_hash'] = current_hash
-
-        agent = st.session_state['agent']
-
         if 'messages' not in st.session_state:
             st.session_state.messages = []
 
+        # Display full chat history including images stored in session_state
         for msg in st.session_state.messages:
             with st.chat_message(msg['role']):
                 st.markdown(msg['content'])
+                for img_path in msg.get('imgs', []):
+                    if os.path.exists(img_path):
+                        st.image(img_path, use_container_width=True)
+                        with open(img_path, 'rb') as img_f:
+                            st.download_button(
+                                '💾 Download Graph',
+                                data=img_f,
+                                file_name=os.path.basename(img_path),
+                                mime='image/png',
+                            )
 
         # Map quick-viz buttons to prompt strings
         QUICK_QUERIES = {
@@ -525,35 +549,10 @@ if st.session_state.get('data_loaded'):
                 break
 
         if query_input:
-            st.session_state.messages.append({'role': 'user', 'content': query_input})
-            with st.chat_message('user'):
-                st.markdown(query_input)
-
-            with st.chat_message('assistant'):
-                with st.spinner('Analysis Agent rendering…'):
-                    # Clear previous PNGs before generating new ones
-                    for old_png in glob.glob(f'{OUTPUT_DIR}/*.png'):
-                        os.remove(old_png)
-
-                    try:
-                        answer     = agent.invoke(query_input)
-                        clean_text = answer['output'].replace('Final Answer:', '').strip()
-                        st.markdown(clean_text)
-                        st.session_state.messages.append(
-                            {'role': 'assistant', 'content': clean_text}
-                        )
-
-                        for img_path in sorted(glob.glob(f'{OUTPUT_DIR}/*.png')):
-                            st.image(img_path, use_container_width=True)
-                            with open(img_path, 'rb') as img_f:
-                                st.download_button(
-                                    '💾 Download Graph',
-                                    data=img_f,
-                                    file_name=os.path.basename(img_path),
-                                    mime='image/png',
-                                )
-                    except Exception as e:
-                        st.error(f'Analysis Error: {e}')
+            st.session_state.messages.append({'role': 'user', 'content': query_input, 'imgs': []})
+            # Store query and rerun — execution happens outside tabs to prevent duplication
+            st.session_state['agent_query'] = query_input
+            st.rerun()
 
 else:
     st.info(
