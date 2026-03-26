@@ -404,19 +404,23 @@ if st.session_state.get('data_loaded'):
             st.session_state['agent_hash'] = current_hash
 
     # ── Agent query execution OUTSIDE tabs ───────────────────────────────────────
+    # No st.rerun() after completion — fall through to tabs so Streamlit stays
+    # on the current tab and doesn't reset to tab 1.
     if st.session_state.get('agent_query'):
         query = st.session_state.pop('agent_query')
         for old_png in glob.glob(f'{OUTPUT_DIR}/*.png'):
             os.remove(old_png)
-        with st.spinner('Analysis Agent rendering…'):
-            try:
-                answer     = st.session_state['agent'].invoke(query)
-                clean_text = answer['output'].replace('Final Answer:', '').strip()
-                imgs = sorted(glob.glob(f'{OUTPUT_DIR}/*.png'))
-                st.session_state['messages'].append({'role': 'assistant', 'content': clean_text, 'imgs': imgs})
-            except Exception as e:
-                st.session_state['messages'].append({'role': 'assistant', 'content': f'Analysis Error: {e}', 'imgs': []})
-        st.rerun()
+        _agent_placeholder = st.empty()
+        with _agent_placeholder.container():
+            with st.spinner('Analysis Agent rendering…'):
+                try:
+                    answer     = st.session_state['agent'].invoke(query)
+                    clean_text = answer['output'].replace('Final Answer:', '').strip()
+                    imgs = sorted(glob.glob(f'{OUTPUT_DIR}/*.png'))
+                    st.session_state['messages'].append({'role': 'assistant', 'content': clean_text, 'imgs': imgs})
+                except Exception as e:
+                    st.session_state['messages'].append({'role': 'assistant', 'content': f'Analysis Error: {e}', 'imgs': []})
+        _agent_placeholder.empty()  # clear spinner before tabs render
 
     # ── Training runs OUTSIDE tabs to avoid Streamlit tab/spinner duplication ──
     if st.session_state.get('model_training'):
