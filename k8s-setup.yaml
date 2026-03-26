@@ -2,20 +2,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: neuro-app-deployment
+  name: neuropipeline-app-deployment
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: neuro-app
+      app: neuropipeline-app
   template:
     metadata:
       labels:
-        app: neuro-app
+        app: neuropipeline-app
     spec:
       containers:
       - name: neuro-container
-        image: mlops-agent:v1  #my docker image name
+        image: mlops-agent:v2  #my docker image name
         imagePullPolicy: Never #  use local image without pulling from registry
         ports:
         - containerPort: 8501  # the streamlit app runs on this port
@@ -25,10 +25,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: neurpipeline-app
+  name: neuropipeline-app
 spec:
   selector:
-    app: neuro-app
+    app: neuropipeline-app
   ports:
     - protocol: TCP
       port: 80
@@ -39,16 +39,20 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: neuro-app-ingress
+  name: neuropipeline-app-ingress
 spec:
+  tls:
+  - hosts:
+    - neuropipeline-app
+    secretName: neuroapp-tls
   rules:
-  - host: neurpipeline-app
+  - host: neuropipeline-app
     http:
       paths:
       - path: /
         pathType: Prefix
         backend:
           service:
-            name: neurpipeline-app
+            name: neuropipeline-app
             port:
               number: 80
