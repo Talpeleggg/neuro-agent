@@ -100,28 +100,25 @@ st.markdown(f"""
     margin: 0;
 }}
 
-/* --- BUTTON STYLES (Bold & Popping) --- */
-/* White background with thick border and shadow to stand out against the blue hero */
+/* --- BUTTON STYLES (Gradient Light Blue) --- */
 div.stButton > button {{
-    background-color: #FFFFFF !important;
-    color: #1A3A8A !important;
-    border: 2px solid #4A78F5 !important;
+    background: linear-gradient(135deg, #6DB8F2 0%, #4A90D9 60%, #2E6FBF 100%) !important;
+    color: #FFFFFF !important;
+    border: none !important;
     border-radius: 8px !important;
     font-weight: 800 !important;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05) !important;
+    box-shadow: 0 4px 14px rgba(74, 144, 217, 0.35) !important;
     transition: all 0.3s ease !important;
 }}
 div.stButton > button:hover {{
-    background-color: #4A78F5 !important;
+    background: linear-gradient(135deg, #89CBFF 0%, #5BA3E8 60%, #3A7FD5 100%) !important;
     color: #FFFFFF !important;
-    border-color: #4A78F5 !important;
-    box-shadow: 0 6px 15px rgba(74, 120, 245, 0.3) !important;
+    box-shadow: 0 6px 20px rgba(74, 144, 217, 0.5) !important;
     transform: translateY(-2px) !important;
 }}
 div.stButton > button:active {{
-    background-color: #1A3A8A !important;
+    background: linear-gradient(135deg, #3A7FD5 0%, #2E6FBF 100%) !important;
     color: #FFFFFF !important;
-    border-color: #1A3A8A !important;
 }}
 
 /* --- METRICS CARDS (Bold & 3D Effect) --- */
@@ -147,26 +144,24 @@ div.stMetric [data-testid="stMetricValue"] {{
 
 /* --- DOWNLOAD BUTTON STYLES (matches regular buttons) --- */
 div.stDownloadButton > button {{
-    background-color: #FFFFFF !important;
-    color: #1A3A8A !important;
-    border: 2px solid #4A78F5 !important;
+    background: linear-gradient(135deg, #6DB8F2 0%, #4A90D9 60%, #2E6FBF 100%) !important;
+    color: #FFFFFF !important;
+    border: none !important;
     border-radius: 8px !important;
     font-weight: 800 !important;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05) !important;
+    box-shadow: 0 4px 14px rgba(74, 144, 217, 0.35) !important;
     transition: all 0.3s ease !important;
     width: 100%;
 }}
 div.stDownloadButton > button:hover {{
-    background-color: #4A78F5 !important;
+    background: linear-gradient(135deg, #89CBFF 0%, #5BA3E8 60%, #3A7FD5 100%) !important;
     color: #FFFFFF !important;
-    border-color: #4A78F5 !important;
-    box-shadow: 0 6px 15px rgba(74, 120, 245, 0.3) !important;
+    box-shadow: 0 6px 20px rgba(74, 144, 217, 0.5) !important;
     transform: translateY(-2px) !important;
 }}
 div.stDownloadButton > button:active {{
-    background-color: #1A3A8A !important;
+    background: linear-gradient(135deg, #3A7FD5 0%, #2E6FBF 100%) !important;
     color: #FFFFFF !important;
-    border-color: #1A3A8A !important;
 }}
 
 /* Chat Styles */

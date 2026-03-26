@@ -1,0 +1,54 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: neuro-app-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: neuro-app
+  template:
+    metadata:
+      labels:
+        app: neuro-app
+    spec:
+      containers:
+      - name: neuro-container
+        image: mlops-agent:v1  #my docker image name
+        imagePullPolicy: Never #  use local image without pulling from registry
+        ports:
+        - containerPort: 8501  # the streamlit app runs on this port
+
+---
+# service opens port 80 and forwards to the deployment's port 8501
+apiVersion: v1
+kind: Service
+metadata:
+  name: neurpipeline-app.local
+spec:
+  selector:
+    app: neuro-app
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8501
+
+---
+# ingress routes external traffic to the service based on host and path
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: neuro-app-ingress
+spec:
+  rules:
+  - host: neurpipeline-app.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: neurpipeline-app.local
+            port:
+              number: 80

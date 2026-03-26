@@ -1,11 +1,10 @@
 [theme]
-primaryColor = "#1163a2"
+base="dark"
 
-# Main page background — light icy blue, calm and easy on the eyes
-backgroundColor = "#b6d0e9"
+primaryColor="#319cb4"
 
-# Sidebar background — slightly more saturated blue to create visual separation
-secondaryBackgroundColor = "#e4e6e7"
+backgroundColor="#0B0F19"
 
-# General text color — dark navy instead of plain black, for a softer look
-textColor = "#0D1F45"
+secondaryBackgroundColor="#111827"
+
+textColor="#FFFFFF"
