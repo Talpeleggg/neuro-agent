@@ -74,7 +74,12 @@ ANALYSIS CAPABILITIES:
 - Event-Related Potential (ERP) averaging
 - Artifact flagging (extreme values, flatlines)
 
-CRITICAL: Your final response MUST begin with the exact prefix: "Final Answer: "
+OUTPUT FORMAT — CRITICAL, follow exactly:
+- When you have finished executing code and have a result, respond ONLY with:
+  Final Answer: <your short summary here>
+- Do NOT write long explanations before "Final Answer:".
+- Do NOT include code blocks in your final answer.
+- If the code ran successfully, just confirm what was saved and where.
 """
 
     return create_pandas_dataframe_agent(
@@ -84,6 +89,7 @@ CRITICAL: Your final response MUST begin with the exact prefix: "Final Answer: "
         allow_dangerous_code=True,
         prefix=instructions,
         handle_parsing_errors=True,
+        agent_executor_kwargs={"handle_parsing_errors": True},
     )
 
 
