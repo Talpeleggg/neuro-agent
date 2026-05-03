@@ -535,6 +535,7 @@ if st.session_state.get('data_loaded'):
                                 data=img_f,
                                 file_name=os.path.basename(img_path),
                                 mime='image/png',
+                                key=f'dl_{img_path}',
                             )
 
         # Map quick-viz buttons to prompt strings
